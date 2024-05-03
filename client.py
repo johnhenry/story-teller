@@ -1,12 +1,14 @@
-from settings import GROQ_API_KEY, GROQ_DEFAULT_MODEL
 from groq import Groq
+from aiohttp import web
+from settings import GROQ_API_KEY, GROQ_DEFAULT_MODEL
+
 # from util import read_file
 
 # System Message
 # system_message = read_file("role/system.txt")
 
 # Creates text based on preceding and following text
-def create_text(text_before, text_after, prompt):
+def create_text(prompt):
   try:
     completion = Groq(
       api_key=GROQ_API_KEY,
@@ -19,7 +21,7 @@ def create_text(text_before, text_after, prompt):
     # },
     {
       "role": "user",
-      "content": prompt.format(previous=text_before, next=text_after)
+      "content": prompt
     }
     ])
   except Exception as e:
