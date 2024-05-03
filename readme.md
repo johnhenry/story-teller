@@ -51,6 +51,12 @@ export GROQ_API_KEY=<get from https://console.groq.com/keys>
 python main.py
 ```
 
+### Reset pages
+
+```shell
+rm page/*.html
+```
+
 ### Vist
 
 Vist [http://localhost:8080](http://localhost:8080)
