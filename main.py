@@ -72,9 +72,10 @@ def handleRandom(_):
 
 # Wrap stext in HTML
 def wrapHTML(text, index):
+  index = index + 1
   numbered_links = []
   for i in range(PAGE_MAX):
-    numbered_links.append(f"<a href=\"/{i}\">{i}</a>")
+    numbered_links.append(f"<a href=\"/{i+1}\" title=\"page:{i+1}\">{i+1}</a>")
   numbered_links = "".join(numbered_links)
   return f"""
   <html>
@@ -98,11 +99,11 @@ def wrapHTML(text, index):
   <body>
     <h1 title="current">{index}</h1>
     <nav>
-      <a title="start" href="/0">&lt;&lt;</a>
+      <a title="start" href="/1">&lt;&lt;</a>
       <a title="previous" href="/{index-1}">&lt;</a>
       <a title="random" href="/">🎲</a>
       <a title="next" href="/{index+1}">&gt;</a>
-      <a title="end" href="/{PAGE_MAX-1}">&gt;&gt;</a>
+      <a title="end" href="/{PAGE_MAX}">&gt;&gt;</a>
     </nav>
     <pre>{text}</pre>
     <nav>
@@ -117,7 +118,7 @@ def handle(request):
     page = request.match_info.get('page')
     if(page.isnumeric()):
       try:
-        page = int(page)
+        page = int(page)-1
         if page < 0 or page >= PAGE_MAX:
           raise IndexError
         with open(f"page/{page}.txt", "r") as f:
@@ -129,11 +130,11 @@ def handle(request):
         return web.Response(text=wrapHTML(text, page),
         content_type='text/html', status=201, headers={'x-before': before_text, 'x-after': after_text})
       except IndexError:
-        raise web.HTTPFound(f"/{randrange(PAGE_MAX)}")
+        raise web.HTTPFound(f"/{randrange(PAGE_MAX)+1}")
       except Exception as e:
         return web.HTTPInternalServerError()
     else:
-      raise web.HTTPFound(f"/{randrange(PAGE_MAX)}")
+      raise web.HTTPFound(f"/{randrange(PAGE_MAX)+1}")
 
 # Create application
 app = web.Application()
