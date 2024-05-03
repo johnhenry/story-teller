@@ -78,13 +78,15 @@ def wrapHTML(text, index):
     <title>Story</title>
   </head>
   <body>
+    <h1 title="current">{index}</h1>
     <nav>
-      <a href="/{index-1}">Previous</a>
-      <span>{index}</span>
-      <a href="/{index+1}">Next</a>
-      <a href="/">🎲 </a>
+      <a title="start" href="/0">&lt;&lt;</a>
+      <a title="previous" href="/{index-1}">&lt;</a>
+      <a title="random" href="/">🎲 </a>
+      <a title="next" href="/{index+1}">&gt;</a>
+      <a title="end" href="/{PAGE_MAX-1}">&gt;&gt;</a>
     </nav>
-    <pre style="word-wrap: break-word; white-space: pre-wrap" >{text}</pre>
+    <pre style="word-wrap: break-word; white-space: pre-wrap">{text}</pre>
   </body>
   </html>
   """
