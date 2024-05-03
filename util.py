@@ -1,5 +1,6 @@
 from pathlib import Path
 import logging
+import glob
 logging.basicConfig(level=logging.ERROR)
 
 def log_error(message):
@@ -18,3 +19,6 @@ def write_file(file_path, text):
   except Exception as e:
     log_error(f"File Error {file_path}: {e}")
     return None
+
+def glob_count(pattern):
+    return len(glob.glob(pattern))

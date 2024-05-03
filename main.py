@@ -3,7 +3,7 @@ from random import randrange
 from jinja2 import Environment, FileSystemLoader
 from settings import PAGE_MAX, PAGE_REACH, PAGE_PATH, SITE_ROOT
 from client import create_text
-from util import read_file, write_file
+from util import read_file, write_file, glob_count
 from pyquery import PyQuery
 
 # Prompts
@@ -18,7 +18,7 @@ def get_page(page, reach=PAGE_REACH):
   pages_previous, pages_next = [], []
   base_path = PAGE_PATH
   text = read_file(PAGE_PATH / f"{page}.html")
-  if text:
+  if text is not None:
     return text, None, None, 200
   for i in range(1, reach + 1):
       file_path = base_path / f"{page - i}.html"
@@ -52,27 +52,43 @@ def get_page(page, reach=PAGE_REACH):
         max_pages=PAGE_MAX))
   return text, previous.replace("\n", ""), next.replace("\n", ""), 201
 
+
+def final_page_created():
+  print(f"All {PAGE_MAX} pages created!")
+
+
 # Request Handler: Retrieves page. Generates text if none exists. Redirects if url is invalid.
 async def handle(request):
   page = request.match_info.get('page')
-
+  # convert page to int
   try:
     page = int(page)
   except Exception as e:
     page = None
+  # Reirect to random endpoint if page is invalid
   if not page or not (0 < page <= PAGE_MAX):
     raise web.HTTPFound(f"/{randrange(PAGE_MAX) + 1}.html")
+  # retrieve cached page or generate new page
+  text, previous, next, status = get_page(page)
+  # create response using page text
 
-  text, previous, next, status_code = get_page(page)
-
-  response = web.Response(text=text, status=status_code, content_type='text/html')
-
+  response = web.Response(
+    text=text,
+    status=status,
+    content_type='text/html')
+  # add content if it was just used to generate currently viewed page
   if previous:
     response.headers['x-previous'] = previous.replace('\n', ' ')
   if next:
     response.headers['x-next'] = next.replace('\n', ' ')
-  return response
 
+  if(status == 201):
+    count = glob_count("page/*.html")
+    print("Created Files: ", count)
+    if count == PAGE_MAX:
+      final_page_created()
+
+  return response
 # Create application
 app = web.Application()
 # Add routes to application
