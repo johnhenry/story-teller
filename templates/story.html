@@ -19,13 +19,13 @@
     </style>
   </head>
   <body>
-    <h1 title="current">{{ index + 1 }}</h1>
+    <h1 title="current">{{ index }}</h1>
     <nav>
-      <a title="start" href="/1">&lt;&lt;</a>
-      <a title="previous" href="/{{ index }}">&lt;</a>
+      <a title="start" href="/1.html">&lt;&lt;</a>
+      <a title="previous" href="/{{ index -1 }}.html">&lt;</a>
       <a title="random" href="/">🎲</a>
-      <a title="next" href="/{{ index + 2 }}">&gt;</a>
-      <a title="end" href="/{{ max_pages }}">&gt;&gt;</a>
+      <a title="next" href="/{{ index + 1 }}.html">&gt;</a>
+      <a title="end" href="/{{ max_pages }}.html">&gt;&gt;</a>
     </nav>
     <pre>{{ text }}</pre>
     <nav>{{ links | safe }}</nav>

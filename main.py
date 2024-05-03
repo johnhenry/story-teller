@@ -1,13 +1,10 @@
 from aiohttp import web
 from random import randrange
 from jinja2 import Environment, FileSystemLoader
-from settings import PAGE_MAX, PAGE_REACH, PAGE_PATH
+from settings import PAGE_MAX, PAGE_REACH, PAGE_PATH, SITE_ROOT
 from client import create_text
 from util import read_file, write_file
 from pyquery import PyQuery
-
-# d = PyQuery('<!DOCTYPE html><html><body><p>Hello</p></body></html>')
-# print(d('p').text())
 
 # Prompts
 prompt_env = Environment(loader=FileSystemLoader('prompt'))
@@ -41,26 +38,31 @@ def get_page(page, reach=PAGE_REACH):
   previous = "\n".join(pages_previous)
   next = "\n".join(pages_next)
 
-  prompt = prompts[0 if page == 0 else 2 if page == PAGE_MAX - 1 else 1].render(previous=previous, next=next)
+  prompt = prompts[0 if page == 1 else 2 if page == PAGE_MAX else 1].render(previous=previous, next=next)
 
-  links_html = ''.join(
-    [f'<a href="/{i+1}" title="page:{i+1}">{i+1}</a>' for i in range(PAGE_MAX)]
+  links = ''.join(
+    [f'<a href="/{i}.html" title="page:{i}">{i}</a>' for i in range(1, PAGE_MAX+1)]
   )
 
   text = write_file(
       f"page/{page}.html",
-      template.render(text=create_text(prompt), index=page, links=links_html, max_pages=PAGE_MAX))
+      template.render(
+        text=create_text(prompt),
+        index=page, links=links,
+        max_pages=PAGE_MAX))
   return text, previous.replace("\n", ""), next.replace("\n", ""), 201
 
 # Request Handler: Retrieves page. Generates text if none exists. Redirects if url is invalid.
 async def handle(request):
   page = request.match_info.get('page')
 
-  if not page or not page.isdigit() or not (0 < int(page) <= PAGE_MAX):
-    print("Page:", page)
-    raise web.HTTPFound(f"/{randrange(PAGE_MAX) + 1}")
+  try:
+    page = int(page)
+  except Exception as e:
+    page = None
+  if not page or not (0 < page <= PAGE_MAX):
+    raise web.HTTPFound(f"/{randrange(PAGE_MAX) + 1}.html")
 
-  page = int(page) - 1
   text, previous, next, status_code = get_page(page)
 
   response = web.Response(text=text, status=status_code, content_type='text/html')
@@ -75,10 +77,11 @@ async def handle(request):
 app = web.Application()
 # Add routes to application
 app.add_routes([
-  web.get('/favicon.ico',
-          lambda _: web.Response(status=200, content_type='image/x-icon')),
-  web.get('/', handle),
-  web.get('/{page}', handle)])
+  web.get(f'{SITE_ROOT}favicon.ico',
+          lambda _: web.Response(content_type='image/x-icon')),
+  web.get(f'{SITE_ROOT}', handle),
+  web.get(f'{SITE_ROOT}{{page}}.html', handle),
+  web.get(f'{SITE_ROOT}{{page}}', handle)])
 # Run application
 if __name__ == '__main__':
     web.run_app(app)
