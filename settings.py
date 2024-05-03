@@ -1,5 +1,8 @@
-import os
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-GROQ_DEFAULT_MODEL = os.environ.get("GROQ_DEFAULT_MODEL") or "llama3-8b-8192"
-PAGE_MAX = 32
-PAGE_REACH = 3
+from pathlib import Path
+from decouple import config
+
+GROQ_API_KEY = config('GROQ_API_KEY')
+GROQ_DEFAULT_MODEL = config('GROQ_DEFAULT_MODEL', default='llama3-8b-8192')
+PAGE_MAX = config('PAGE_MAX', default=32, cast=int)
+PAGE_REACH = config('PAGE_REACH', default=3, cast=int)
+PAGE_PATH = Path(config('PAGE_PATH', default="page"))

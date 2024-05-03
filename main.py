@@ -1,146 +1,76 @@
 from aiohttp import web
 from random import randrange
-from groq import Groq
-from settings import GROQ_DEFAULT_MODEL, PAGE_MAX, PAGE_REACH
-from client import createClient
+from jinja2 import Environment, FileSystemLoader
+from settings import PAGE_MAX, PAGE_REACH, PAGE_PATH
+from client import create_text
+from util import read_file, write_file
 
-# System Message
-# with open('role/system.txt', 'r') as file:
-#   system_message = file.read()
 
 # Prompts
-with open('prompt/first.txt', 'r') as file:
-  prompt_first = file.read()
-with open('prompt/mid.txt', 'r') as file:
-  prompt_mid = file.read()
-with open('prompt/last.txt', 'r') as file:
-  prompt_last = file.read()
+prompts = list(map(lambda name: read_file(f"prompt/{name}.txt"), ["first", "mid", "last"]))
 
-# Creates text based on preceding and following text
-def create_text(text_before, text_after, prompt):
-    try:
-      completion = createClient().chat.completions.create(
-      model=GROQ_DEFAULT_MODEL,
-      messages=[
-      # {
-      #   "role": "system",
-      #   "content": system_message
-      # },
-      {
-        "role": "user",
-        "content": prompt.format(previous=text_before, next=text_after)
-      }
-      ])
-    except Exception as e:
-      print(e)
-      raise web.HTTPInternalServerError()
-    return completion.choices[0].message.content
+# Templates
+templates = Environment(loader=FileSystemLoader('templates'))
 
-# Creates page based preceding and following pages
-def create_page(page, reach=PAGE_REACH):
-  with open(f"page/{page}.txt", 'w') as file:
-    pages_before =[]
-    for i in range(reach+1):
-      try:
-        with open(f"page/{page-i}.txt", "r") as f:
-          text= f.read()
-          pages_before.insert(0,text)
-      except FileNotFoundError:
-        break
-    pages_after =[]
-    for i in range(reach+1):
-      try:
-        with open(f"page/{page+i}.txt", "r") as f:
-          pages_after.append(f.read())
-      except FileNotFoundError:
-        break
-    text_before = "\n".join(pages_before)
-    text_after = "\n".join(pages_after)
-    if page == 0:
-      prompt = prompt_first
-    elif page == PAGE_MAX - 1:
-      prompt = prompt_last
-    else:
-      prompt = prompt_mid
-    text = create_text(text_before, text_after, prompt)
-    file.write(text)
-  return text, text_before.replace("\n", ""), text_after.replace("\n", "")
+# Retrieves page. Generates text if none exists.
+def get_page(page, reach=PAGE_REACH):
+  pages_before, pages_after = [], []
+  base_path = PAGE_PATH
+  text = read_file(PAGE_PATH / f"{page}.txt")
+  if text:
+    return text, None, None, 200
+  for i in range(1, reach + 1):
+      file_path = base_path / f"{page - i}.txt"
+      if file_path.exists():
+          pages_before.insert(0, file_path.read_text())  # Insert at beginning to maintain order
+      else:
+          break  # Stop if a gap is found
+  # Check and collect pages immediately after the current page
+  for i in range(1, reach + 1):
+      file_path = base_path / f"{page + i}.txt"
+      if file_path.exists():
+          pages_after.append(file_path.read_text())
+      else:
+          break  # Stop if a gap is found
+  text_before = "\n".join(pages_before)
+  text_after = "\n".join(pages_after)
 
-# Route Handler: Sends user to a random page
-def handleRandom(_):
-  raise web.HTTPFound(f"/{randrange(PAGE_MAX)}")
+  prompt = prompts[0 if page == 0 else 2 if page == PAGE_MAX - 1 else 1]
 
-# Wrap stext in HTML
-def wrapHTML(text, index):
-  index = index + 1
-  numbered_links = []
-  for i in range(PAGE_MAX):
-    numbered_links.append(f"<a href=\"/{i+1}\" title=\"page:{i+1}\">{i+1}</a>")
-  numbered_links = "".join(numbered_links)
-  return f"""
-  <html>
-  <head>
-    <title>Story</title>
-    <style>
+  text = write_file(
+      f"page/{page}.txt",
+      create_text(text_before, text_after, prompt))
+  return text, text_before.replace("\n", ""), text_after.replace("\n", ""), 201
 
-      nav {{
-        width: 100%;
-        display: flex;
-        justify-content: flex-start;
-        gap: 1rem;
-        flex-wrap: wrap;
-      }}
-      pre {{
-        word-wrap: break-word;
-        white-space: pre-wrap;
-      }}
-    </style>
-  </head>
-  <body>
-    <h1 title="current">{index}</h1>
-    <nav>
-      <a title="start" href="/1">&lt;&lt;</a>
-      <a title="previous" href="/{index-1}">&lt;</a>
-      <a title="random" href="/">🎲</a>
-      <a title="next" href="/{index+1}">&gt;</a>
-      <a title="end" href="/{PAGE_MAX}">&gt;&gt;</a>
-    </nav>
-    <pre>{text}</pre>
-    <nav>
-      {numbered_links}
-    </nav>
-  </body>
-  </html>
-  """
+# Request Handler: Retrieves page. Generates text if none exists. Redirects if url is invalid.
+async def handle(request):
+  page = request.match_info.get('page')
 
-# Route Handler: Retrieves or creates page
-def handle(request):
-    page = request.match_info.get('page')
-    if(page.isnumeric()):
-      try:
-        page = int(page)-1
-        if page < 0 or page >= PAGE_MAX:
-          raise IndexError
-        with open(f"page/{page}.txt", "r") as f:
-          text = f.read()
-          return web.Response(text=wrapHTML(text, page),
-        content_type='text/html', status=200)
-      except FileNotFoundError:
-        text, before_text, after_text = create_page(page)
-        return web.Response(text=wrapHTML(text, page),
-        content_type='text/html', status=201, headers={'x-before': before_text, 'x-after': after_text})
-      except IndexError:
-        raise web.HTTPFound(f"/{randrange(PAGE_MAX)+1}")
-      except Exception as e:
-        return web.HTTPInternalServerError()
-    else:
-      raise web.HTTPFound(f"/{randrange(PAGE_MAX)+1}")
+  if not page or not page.isdigit() or not (0 < int(page) <= PAGE_MAX):
+    print("Page:", page)
+    raise web.HTTPFound(f"/{randrange(PAGE_MAX) + 1}")
+
+  page = int(page) - 1
+  text, before_text, after_text, status_code = get_page(page)
+  links_html = ''.join(
+    [f'<a href="/{i+1}" title="page:{i+1}">{i+1}</a>' for i in range(PAGE_MAX)]
+  )
+  response = web.Response(text=templates.get_template('story.html').render(text=text, index=page, links=links_html, max_pages=PAGE_MAX), status=status_code, content_type='text/html')
+
+  if before_text:
+    response.headers['x-before'] = before_text.replace('\n', ' ')
+  if after_text:
+    response.headers['x-after'] = after_text.replace('\n', ' ')
+  return response
 
 # Create application
 app = web.Application()
 # Add routes to application
-app.add_routes([web.get('/', handleRandom),
-                web.get('/{page}', handle)])
+app.add_routes([
+  web.get('/favicon.ico',
+          lambda _: web.Response(status=200, content_type='image/x-icon')),
+  web.get('/', handle),
+  web.get('/{page}', handle)])
 # Run application
 if __name__ == '__main__':
     web.run_app(app)
