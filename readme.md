@@ -12,6 +12,13 @@ Pages that do not exist will be automagically generated.
 
 ## Setup
 
+### Clone this repository locally and navigate to it
+
+```shell
+git clone  git@github.com:johnhenry/story-teller.git
+cd story-teller
+```
+
 ### Create environment
 
 ```shell
