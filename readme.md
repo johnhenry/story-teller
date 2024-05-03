@@ -8,7 +8,9 @@ Pages that do not exist will be automagically generated.
 
 ## Requirements
 
-- [conda](https://conda.io)
+- [git](https://conda.io) -- for cloning the application
+- [conda](https://conda.io) -- for running the application
+- [groq account](https://console.groq.com/) -- for using the Groq API
 
 ## Setup
 
