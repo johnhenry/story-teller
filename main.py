@@ -1,7 +1,7 @@
 from aiohttp import web
 from random import randrange
 from jinja2 import Environment, FileSystemLoader
-from settings import PAGE_MAX, PAGE_REACH, PAGE_PATH, SITE_ROOT
+from settings import PAGE_MAX, PAGE_REACH, PAGE_PATH, SITE_ROOT, REDIRECT_ON_COMPLETE
 from client import create_text
 from util import read_file, write_file, glob_count
 from pyquery import PyQuery
@@ -104,7 +104,8 @@ async def handle(request):
     if count == PAGE_MAX:
       print(f"All {count} files created. Combining...")
       combine_and_save_text()
-      raise web.HTTPFound(f"/0.html")
+      if REDIRECT_ON_COMPLETE:
+        raise web.HTTPFound(f"/0.html")
 
   return response
 # Create application

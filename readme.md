@@ -6,6 +6,9 @@ Visit pages directly `/{page_number}` or visit `/` to get a random page.
 
 Pages that do not exist will be automagically generated.
 
+Upone generating the last page, you'll be redirected to `0.html`
+where all pages have been concatinated into a single page.
+
 ## Requirements
 
 - [git](https://conda.io) -- for cloning the application
