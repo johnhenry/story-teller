@@ -72,21 +72,42 @@ def handleRandom(_):
 
 # Wrap stext in HTML
 def wrapHTML(text, index):
+  numbered_links = []
+  for i in range(PAGE_MAX):
+    numbered_links.append(f"<a href=\"/{i}\">{i}</a>")
+  numbered_links = "".join(numbered_links)
   return f"""
   <html>
   <head>
     <title>Story</title>
+    <style>
+
+      nav {{
+        width: 100%;
+        display: flex;
+        justify-content: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }}
+      pre {{
+        word-wrap: break-word;
+        white-space: pre-wrap;
+      }}
+    </style>
   </head>
   <body>
     <h1 title="current">{index}</h1>
     <nav>
       <a title="start" href="/0">&lt;&lt;</a>
       <a title="previous" href="/{index-1}">&lt;</a>
-      <a title="random" href="/">🎲 </a>
+      <a title="random" href="/">🎲</a>
       <a title="next" href="/{index+1}">&gt;</a>
       <a title="end" href="/{PAGE_MAX-1}">&gt;&gt;</a>
     </nav>
-    <pre style="word-wrap: break-word; white-space: pre-wrap">{text}</pre>
+    <pre>{text}</pre>
+    <nav>
+      {numbered_links}
+    </nav>
   </body>
   </html>
   """
