@@ -11,15 +11,22 @@ prompt_env = Environment(loader=FileSystemLoader('prompt'))
 prompts = list(map(lambda name: prompt_env.get_template(f"{name}.txt"), ["first", "mid", "last"]))
 
 # Templates
+
+links = ''.join(
+  [f'<a href="/{i}.html" title="page:{i}">{i}</a>' for i in range(PAGE_MAX+1)]
+)
 template = Environment(loader=FileSystemLoader('templates')).get_template('story.html')
+
 
 # Retrieves page. Generates text if none exists.
 def get_page(page, reach=PAGE_REACH):
-  pages_previous, pages_next = [], []
   base_path = PAGE_PATH
   text = read_file(PAGE_PATH / f"{page}.html")
   if text is not None:
     return text, None, None, 200
+  if(page == 0):
+    raise FileNotFoundError
+  pages_previous, pages_next = [], []
   for i in range(1, reach + 1):
       file_path = base_path / f"{page - i}.html"
       if file_path.exists():
@@ -40,22 +47,28 @@ def get_page(page, reach=PAGE_REACH):
 
   prompt = prompts[0 if page == 1 else 2 if page == PAGE_MAX else 1].render(previous=previous, next=next)
 
-  links = ''.join(
-    [f'<a href="/{i}.html" title="page:{i}">{i}</a>' for i in range(1, PAGE_MAX+1)]
-  )
-
   text = write_file(
       f"page/{page}.html",
       template.render(
-        text=create_text(prompt),
-        index=page, links=links,
+        pres=create_text(prompt),
+        index=page,
+        links=links,
         max_pages=PAGE_MAX))
   return text, previous.replace("\n", ""), next.replace("\n", ""), 201
 
 
-def final_page_created():
-  print(f"All {PAGE_MAX} pages created!")
+# Combines all html content and saves it to a file, 0.html
+def combine_and_save_text():
+  text = []
+  for i in range(1, PAGE_MAX + 1):
+    pq = PyQuery(read_file(PAGE_PATH / f"{i}.html"))
+    text.append(pq('pre').html())
 
+  write_file(PAGE_PATH / "0.html",template.render(
+        pres='\n\n'.join(text),
+        index=0,
+        links=links,
+        max_pages=PAGE_MAX) )
 
 # Request Handler: Retrieves page. Generates text if none exists. Redirects if url is invalid.
 async def handle(request):
@@ -66,10 +79,13 @@ async def handle(request):
   except Exception as e:
     page = None
   # Reirect to random endpoint if page is invalid
-  if not page or not (0 < page <= PAGE_MAX):
+  if page is None or not (0 <= page <= PAGE_MAX):
     raise web.HTTPFound(f"/{randrange(PAGE_MAX) + 1}.html")
   # retrieve cached page or generate new page
-  text, previous, next, status = get_page(page)
+  try:
+    text, previous, next, status = get_page(page)
+  except FileNotFoundError:
+    raise web.HTTPFound(f"/{randrange(PAGE_MAX) + 1}.html")
   # create response using page text
 
   response = web.Response(
@@ -84,9 +100,11 @@ async def handle(request):
 
   if(status == 201):
     count = glob_count("page/*.html")
-    print("Created Files: ", count)
+    print(f"Created Files: {count}/{PAGE_MAX}")
     if count == PAGE_MAX:
-      final_page_created()
+      print(f"All {count} files created. Combining...")
+      combine_and_save_text()
+      raise web.HTTPFound(f"/0.html")
 
   return response
 # Create application

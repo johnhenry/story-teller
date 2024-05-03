@@ -2,10 +2,10 @@ from groq import Groq
 from aiohttp import web
 from settings import GROQ_API_KEY, GROQ_DEFAULT_MODEL
 
-# from util import read_file
+from util import read_file
 
 # System Message
-# system_message = read_file("role/system.txt")
+system_message = read_file("role/system.txt")
 
 # Creates text based on preceding and following text
 def create_text(prompt):
@@ -15,10 +15,10 @@ def create_text(prompt):
     ).chat.completions.create(
     model=GROQ_DEFAULT_MODEL,
     messages=[
-    # {
-    #   "role": "system",
-    #   "content": system_message
-    # },
+    {
+      "role": "system",
+      "content": system_message
+    },
     {
       "role": "user",
       "content": prompt

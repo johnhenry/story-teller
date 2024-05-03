@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Story</title>
+    <title>Story:{{ index }}</title>
     <style>
       nav {
         width: 100%;
@@ -19,15 +19,18 @@
     </style>
   </head>
   <body>
-    <h1 title="current">{{ index }}</h1>
+    <h1 title="current">Story</h1>
+    <h2 title="current">{{ index }}</h2>
     <nav>
       <a title="start" href="/1.html">&lt;&lt;</a>
-      <a title="previous" href="/{{ index -1 }}.html">&lt;</a>
+      <a title="previous" href="/{{ index - 1 }}.html">&lt;</a>
       <a title="random" href="/">🎲</a>
       <a title="next" href="/{{ index + 1 }}.html">&gt;</a>
       <a title="end" href="/{{ max_pages }}.html">&gt;&gt;</a>
     </nav>
-    <pre>{{ text }}</pre>
+    <pre>
+      {{ pres | safe}}
+    </pre>
     <nav>{{ links | safe }}</nav>
   </body>
 </html>
